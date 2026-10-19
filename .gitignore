@@ -117,3 +117,5 @@ keystore_release.properties
 docs/HANDOFF.md
 release-notes.md
 
+build-release*.txt
+
