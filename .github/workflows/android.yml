@@ -26,8 +26,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
 
       # The Miuix AARs declare a minimum compileSdk of 37. The public SDK channel still ships 36,
       # so we install 36 and clone it to 37 with a patched ApiLevel (same trick used locally).
@@ -35,8 +33,12 @@ jobs:
         run: |
           set -euo pipefail
           SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+          # Runners ship the SDK; the deprecated `tools` package breaks setup-android@v3, so use the
+          # preinstalled cmdline-tools directly.
+          SDKMGR="$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -n1)"
+          echo "sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
+          "$SDKMGR" "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null
           if [ ! -d "$SDK/platforms/android-37" ]; then
             cp -r "$SDK/platforms/android-36" "$SDK/platforms/android-37"
             sed -i 's/^AndroidVersion.ApiLevel=.*/AndroidVersion.ApiLevel=37/' \
