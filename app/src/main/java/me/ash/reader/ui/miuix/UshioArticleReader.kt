@@ -146,10 +146,10 @@ fun UshioArticleReader(
             }
         }
 
-        // 只有滑块本身可拖动，从右边缘起手的普通滑动仍然滚动正文。
-        UshioFastScrollBar(
+
+        SlateMinimalScrollbar(
             listState = listState,
-            modifier = Modifier.align(Alignment.CenterEnd).padding(top = 120.dp, bottom = 140.dp).width(24.dp),
+            modifier = Modifier.align(Alignment.CenterEnd).padding(top = 120.dp, bottom = 140.dp),
         )
 
         UshioBackToTop(
@@ -221,7 +221,7 @@ private fun UshioHeadingBlock(level: Int, text: String, modifier: Modifier = Mod
                 text = text,
                 fontSize = size,
                 fontWeight = FontWeight.Bold,
-                color = colors.onBackground,
+                color = slateBody(),
                 lineHeight = (size.value * 1.35f).sp,
             )
         }
@@ -252,9 +252,9 @@ private fun UshioParagraph(
         Text(
             text = text,
             modifier = modifier.fillMaxWidth(),
-            color = colors.onBackground,
-            fontSize = 16.sp,
-            lineHeight = 27.2.sp,
+            color = slateBody(),
+            fontSize = 16.5.sp,
+            lineHeight = 29.sp,
             style = MaterialTheme.typography.bodyLarge.copy(letterSpacing = 0.2.sp),
         )
     }
@@ -274,16 +274,15 @@ private fun UshioQuoteBlock(
                 .fillMaxWidth()
                 .padding(bottom = 14.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(colors.surfaceContainerLow)
-                .padding(12.dp),
+                .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier =
-                Modifier.width(4.dp)
-                    .height(28.dp)
+                Modifier.width(3.5.dp)
+                    .height(26.dp)
                     .clip(CircleShape)
-                    .background(colors.primary.copy(alpha = 0.8f))
+                    .background(slateAccent())
         )
         Column(modifier = Modifier.weight(1f)) {
             paragraphs.forEach { paragraph ->
@@ -317,8 +316,8 @@ private fun UshioCodeCard(block: UshioBlock.Code, modifier: Modifier = Modifier)
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(colors.surfaceContainerLow)
-                .border(1.dp, colors.outlineVariant.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                .background(slateSunken())
+                .border(1.dp, Slate.hairline, RoundedCornerShape(12.dp))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = 6.dp),
@@ -405,7 +404,7 @@ private fun UshioImageBlock(
                 imageModifier
                     .border(
                         1.dp,
-                        colors.outlineVariant.copy(alpha = 0.35f),
+                        Slate.hairline,
                         RoundedCornerShape(12.dp),
                     )
                     .androidClickable { onImageClick(block.url, block.caption.orEmpty()) },
@@ -435,8 +434,8 @@ private fun UshioTableBlock(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(colors.surfaceContainerLowest)
-                .border(1.dp, colors.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                .background(Color.Transparent)
+                .border(1.dp, Slate.grid, RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.horizontalScroll(rememberScrollState())) {
             block.rows.forEachIndexed { rowIndex, row ->
@@ -472,7 +471,7 @@ private fun UshioTableBlock(
                         Text(
                             text = text,
                             modifier = Modifier.widthIn(min = 96.dp).padding(12.dp),
-                            color = colors.onBackground,
+                            color = slateBody(),
                             fontSize = 14.sp,
                             lineHeight = 21.sp,
                             fontWeight =
@@ -505,7 +504,7 @@ private fun UshioListBlock(
                 val text = remember(item.outerHtml()) { item.toUshioText(colors.primary, onLinkClick) }
                 Text(
                     text = text,
-                    color = colors.onBackground,
+                    color = slateBody(),
                     fontSize = 16.sp,
                     lineHeight = 26.sp,
                     modifier = Modifier.weight(1f),
@@ -822,16 +821,16 @@ private fun UshioFastScrollBar(
         val travelPx = with(density) { travel.toPx() }.coerceAtLeast(1f)
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val barWidth = 3.dp.toPx()
+            val barWidth = 2.5.dp.toPx()
             val centerX = size.width / 2f
             drawRoundRect(
-                color = colors.onSurface.copy(alpha = 0.10f),
+                color = Color.Black.copy(alpha = 0.08f),
                 topLeft = Offset(centerX - barWidth / 2f, 0f),
                 size = androidx.compose.ui.geometry.Size(barWidth, size.height),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f),
             )
             drawRoundRect(
-                color = colors.primary.copy(alpha = 0.55f),
+                color = Color.Black.copy(alpha = 0.12f),
                 topLeft = Offset(centerX - barWidth / 2f, (travel * progress).toPx()),
                 size = androidx.compose.ui.geometry.Size(barWidth, thumbHeight.toPx()),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f),

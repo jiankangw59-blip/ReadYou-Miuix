@@ -93,7 +93,7 @@ fun MiuixReadingPage(
     BackHandler { onBack() }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        MiuixGlassBackground()
+        MiuixSlateBackground()
 
         Box(modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection)) {
             // Every http(s) link inside the article is hijacked into the in-app browser, so nothing
@@ -189,35 +189,17 @@ fun MiuixReadingPage(
             exit = slideOutVertically { -it } + fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
-            MiuixTopBarLeft(
-                title = readerState.feedName,
-                progress = { 1f },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.updateStarredStatus(!readingUiState.isStarred) }
-                    ) {
-                        Icon(
-                            imageVector =
-                                if (readingUiState.isStarred) Icons.Rounded.Star
-                                else Icons.Rounded.StarOutline,
-                            contentDescription = stringResource(R.string.starred),
-                        )
-                    }
+            SlateReaderTopBar(
+                source = readerState.feedName,
+                meta = readerState.publishedDate.let { d ->
+                    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(d)
+                } + " · " + ((readerState.content.text?.length ?: 0)) + " 文字",
+                starred = readingUiState.isStarred,
+                onBack = onBack,
+                onToggleStar = { viewModel.updateStarredStatus(!readingUiState.isStarred) },
+                onOpenBrowser = {
                     readerState.link?.let { link ->
-                        IconButton(onClick = { normalizeHttpUrl(link, link)?.let { browserUrl.value = it } }) {
-                            Icon(
-                                imageVector = Icons.Rounded.OpenInNew,
-                                contentDescription = stringResource(R.string.open_in_browser),
-                            )
-                        }
+                        normalizeHttpUrl(link, link)?.let { browserUrl.value = it }
                     }
                 },
             )

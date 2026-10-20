@@ -146,6 +146,14 @@ internal object UshioHtml {
         doc.select("script,style,noscript,iframe,svg,head,form,button").remove()
 
         doc.select("img").forEach { img ->
+            // wechat2rss proxies WeChat images through /img-proxy/?k=<signed>&u=<encoded> and that
+            // proxy answers 403 (the signature is short-lived), which is why images in company
+            // WeChat feeds never loaded. Unwrap it back to the original mmbiz.qpic.cn URL.
+            // Feed HTML is double-escaped, so `&` arrives as `&#38;` / `&amp;`. Normalise before
+            // looking at the query string, otherwise the `u=` parameter is never found.
+            val normalized = normalizeFeedImageUrl(img.attr("src"))
+            if (!normalized.isNullOrBlank()) img.attr("src", normalized)
+
             val lazy =
                 listOf("data-src", "data-original", "data-lazy-src", "data-actualsrc", "data-url")
                     .firstNotNullOfOrNull { key -> img.attr(key).takeIf { it.isNotBlank() } }
@@ -312,3 +320,21 @@ internal object UshioHtml {
         return match.groupValues[1]
     }
 }
+
+/** Extracts the original image URL from a wechat2rss `img-proxy` link. */
+private fun unwrapImageProxy(src: String): String? {
+    val cleaned = normalizeUrlEntities(src)
+    val uri = runCatching { android.net.Uri.parse(cleaned) }.getOrNull()
+    val fromUri = uri?.getQueryParameter("u")
+    if (!fromUri.isNullOrBlank()) return fromUri
+    val raw = Regex("[?&]u=([^&]+)").find(cleaned)?.groupValues?.getOrNull(1) ?: return null
+    return runCatching { java.net.URLDecoder.decode(raw, "UTF-8") }.getOrNull()
+}
+
+/** Decodes the HTML entities that survive one Jsoup pass (notably `&#38;` inside query strings). */
+private fun normalizeUrlEntities(url: String): String =
+    url.replace("&#38;", "&")
+        .replace("&#x26;", "&", ignoreCase = true)
+        .replace("&amp;", "&")
+        .replace("\u200b", "")
+        .trim()

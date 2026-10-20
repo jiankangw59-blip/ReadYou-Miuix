@@ -95,7 +95,14 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
-        all { signingConfig = signingConfigs.getByName("release") }
+        // Side-by-side variant: release optimisations with the debug applicationId and debug
+        // signing, so it can be installed *over* an existing debug install without losing data.
+        create("releaseMiuix") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".miuix"
+            signingConfig = signingConfigs.getByName("release")
+            matchingFallbacks += listOf("release")
+        }
     }
     applicationVariants.all {
         outputs.all {

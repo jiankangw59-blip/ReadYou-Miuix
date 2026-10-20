@@ -47,13 +47,17 @@ fun FeedIcon(
             onEmpty = { FontIcon(modifier, size, feedName ?: "") },
         )
     } else {
-        RYAsyncImage(
+        // WeChat-derived feeds often store an icon URL that answers 403/404; showing a grey circle
+        // is worse than a coloured initial, so fall back to the letter avatar on error.
+        coil.compose.SubcomposeAsyncImage(
+            model = me.ash.reader.ui.miuix.normalizeFeedImageUrl(iconUrl) ?: iconUrl,
+            contentDescription = feedName ?: "",
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             modifier = modifier
                 .size(size)
                 .clip(CircleShape),
-            contentDescription = feedName ?: "",
-            data = iconUrl,
-            placeholder = null,
+            loading = { FontIcon(Modifier, size, feedName ?: "") },
+            error = { FontIcon(Modifier, size, feedName ?: "") },
         )
     }
 }

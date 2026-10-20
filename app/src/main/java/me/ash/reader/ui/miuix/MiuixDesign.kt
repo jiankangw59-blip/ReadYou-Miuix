@@ -3,6 +3,7 @@
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,15 +69,7 @@ internal fun miuixCanvasColor(): Color {
 
 /** Glass surface colour used by every card of the Miuix skin. */
 @Composable
-internal fun miuixGlassColor(): Color {
-    val colors = MiuixTheme.colorScheme
-    val isDark = colors.background.luminance() < 0.5f
-    // Pre-blended, opaque glass colour: a translucent fill would blend over the whole card area on
-    // every frame while scrolling.
-    val base = colors.surface
-    return if (isDark) androidx.compose.ui.graphics.lerp(base, Color(0xFF2A2A2E), 0.72f)
-    else androidx.compose.ui.graphics.lerp(base, Color.White, 0.62f)
-}
+internal fun miuixGlassColor(): Color = if (MiuixMorandiIsDark) Slate.raisedDark else Slate.raised
 
 @Composable
 internal fun miuixGlassCardColors() = CardDefaults.defaultColors(color = miuixGlassColor())
@@ -335,7 +328,10 @@ internal fun MiuixGlassCard(
 ) {
     // Plain rounded clip + opaque fill instead of Miuix Card: the squircle path and card elevation
     // were re-clipped for every row on every frame, which showed up as main-thread jank.
-    val base = modifier.clip(RoundedCornerShape(MiuixCardCorner)).background(miuixGlassColor())
+    val base = modifier
+        .clip(RoundedCornerShape(MiuixCardCorner))
+        .background(miuixGlassColor())
+        .border(1.dp, Color.White.copy(alpha = 0.95f), RoundedCornerShape(MiuixCardCorner))
     androidx.compose.foundation.layout.Column(
         modifier = if (onClick != null) base.clickable(onClick = onClick) else base,
         content = content,

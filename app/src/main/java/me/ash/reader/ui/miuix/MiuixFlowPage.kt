@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,13 +83,29 @@ fun MiuixFlowPage(
     val pagingItems = pagerData.pager.collectAsLazyPagingItems()
 
     val listState = rememberLazyListState()
+
+    // Hide the top and bottom bars while scrolling down, reveal them on the way up. Driven by the
+    // list state rather than a nested-scroll connection so the gesture chain stays untouched.
+    val barVisible = rememberAutoHideBarState()
+
+    LaunchedEffect(listState) {
+        var lastOffset = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        androidx.compose.runtime.snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { current ->
+            val delta =
+                (current.first - lastOffset.first) * 1000 + (current.second - lastOffset.second)
+            if (delta > 12 && barVisible.value) barVisible.value = false
+            if (delta < -12 && !barVisible.value) barVisible.value = true
+            lastOffset = current
+        }
+    }
     val progress = rememberTopBarProgress(listState)
     val diffMap = viewModel.diffMapHolder.diffMap
     val wallpaperSeed = rememberWallpaperSeed()
     val iconSeed by rememberImageSeed(filterState.feed?.icon)
     ProvideMiuixSeed(iconSeed ?: wallpaperSeed)
     val showMarkReadSheet = remember { mutableStateOf(false) }
-    val barVisible = rememberAutoHideBarState()
     val barScrollConnection = remember(barVisible) { autoHideBarConnection(barVisible) }
     val colors = MiuixTheme.colorScheme
 
@@ -113,12 +130,12 @@ fun MiuixFlowPage(
         }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        MiuixGlassBackground()
+        MiuixSlateBackground()
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = miuixContentPadding(bottomExtra = 112),
+            contentPadding = miuixContentPadding(bottomExtra = 148),
         ) {
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
@@ -196,39 +213,20 @@ fun MiuixFlowPage(
                     androidx.compose.animation.fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
-        MiuixTopBarLeft(
+        SlateListTopBar(
             title = title,
-            progress = { 0.35f + progress.value * 0.65f },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = stringResource(R.string.back),
-                    )
-                }
-            },
-            actions = {
-                IconButton(onClick = { showMarkReadSheet.value = true }) {
-                    Icon(
-                        imageVector = Icons.Rounded.DoneAll,
-                        contentDescription = stringResource(R.string.mark_all_as_read),
-                    )
-                }
-                IconButton(onClick = { viewModel.sync() }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Refresh,
-                        contentDescription = stringResource(R.string.refresh),
-                    )
-                }
-            },
+            onBack = onBack,
+            onDoneAll = { showMarkReadSheet.value = true },
+            onRefresh = { viewModel.sync() },
         )
-
         }
-        Box(
-            modifier =
-                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = barVisible.value,
+            enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
         ) {
-            MiuixBottomTabs(
+            MiuixFlowBottomTabs(
                 tabs = tabs,
                 selectedTabIndex = selectedTab,
                 onTabSelected = { index ->
@@ -352,7 +350,7 @@ private fun MiuixArticleCard(
                 AsyncImage(
                     model =
                         coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                            .data(article.img)
+                            .data(normalizeFeedImageUrl(article.img))
                             .size(200)
                             .crossfade(false)
                             .build(),

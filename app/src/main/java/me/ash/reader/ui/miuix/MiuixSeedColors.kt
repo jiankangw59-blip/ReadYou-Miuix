@@ -138,7 +138,7 @@ fun rememberImageSeed(url: String?): State<Color?> {
             value = it
             return@produceState
         }
-        val extracted = extractSeedColor(context, url)
+        val extracted = extractSeedColor(context, normalizeFeedImageUrl(url) ?: url)
         android.util.Log.i("MiuixSeed", "extract url=" + url + " -> " + extracted)
         if (extracted != null) {
             SeedColorCache.put(url, extracted)
