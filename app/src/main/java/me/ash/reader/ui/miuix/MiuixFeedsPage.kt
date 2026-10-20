@@ -205,7 +205,7 @@ fun MiuixFeedsPage(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f),
-                beyondViewportPageCount = 0,
+                beyondViewportPageCount = 1,
             ) { _ ->
                 LazyVerticalGrid(
                     state = gridState,
@@ -280,9 +280,10 @@ fun MiuixFeedsPage(
             )
         }
 
+        if (expandedGroup == null) {
         Box(
             modifier =
-                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp)
+                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 44.dp)
         ) {
             MiuixFilterCapsule(
                 tabs = tabs,
@@ -297,6 +298,8 @@ fun MiuixFeedsPage(
                     feedsViewModel.changeFilter(filterState.copy(filter = filter))
                 },
             )
+        }
+
         }
 
         SubscribeDialog(subscribeViewModel = subscribeViewModel)
@@ -583,6 +586,5 @@ private fun androidx.compose.foundation.layout.BoxScope.MiuixGroupSheet(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(88.dp))
     }
 }

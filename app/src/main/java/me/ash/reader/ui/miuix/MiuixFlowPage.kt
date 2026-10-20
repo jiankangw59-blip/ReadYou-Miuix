@@ -1,5 +1,9 @@
 package me.ash.reader.ui.miuix
 
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -129,11 +133,77 @@ fun MiuixFlowPage(
             else -> 0
         }
 
+    fun switchTo(target: Int) {
+        val next = target.coerceIn(0, 2)
+        if (next == selectedTab) return
+        viewModel.changeFilter(
+            filterState.copy(
+                filter =
+                    when (next) {
+                        1 -> Filter.Unread
+                        2 -> Filter.Starred
+                        else -> Filter.All
+                    }
+            )
+        )
+    }
+
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val dragX = androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val lastSwitchAt = androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         MiuixSlateBackground()
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier.fillMaxSize()
+                    // Follow-the-finger offset lives in a graphicsLayer: updating it only touches the
+                    // render node, so dragging costs no recomposition.
+                    .graphicsLayer { translationX = dragX.floatValue }
+                    .pointerInput(selectedTab) {
+                        fun settle() {
+                            scope.launch {
+                                androidx.compose.animation.core.animate(
+                                    initialValue = dragX.floatValue,
+                                    targetValue = 0f,
+                                    animationSpec = androidx.compose.animation.core.spring(
+                                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+                                    ),
+                                ) { value, _ -> dragX.floatValue = value }
+                            }
+                        }
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                val width = size.width.toFloat()
+                                val threshold = width * 0.12f
+                                val dir =
+                                    when {
+                                        dragX.floatValue <= -threshold -> 1
+                                        dragX.floatValue >= threshold -> -1
+                                        else -> 0
+                                    }
+                                val now = android.os.SystemClock.elapsedRealtime()
+                                if (dir != 0 && now - lastSwitchAt.longValue > 400L) {
+                                    lastSwitchAt.longValue = now
+                                    // Commit the filter first, then spring the page back. Switching
+                                    // before the animation means the new data is already loading while
+                                    // the old page slides away, instead of revealing stale content.
+                                    switchTo(selectedTab + dir)
+                                    scope.launch { listState.scrollToItem(0) }
+                                    settle()
+                                } else {
+                                    settle()
+                                }
+                            },
+                            onDragCancel = { settle() },
+                        ) { change, dragAmount ->
+                            // Light resistance only: the page should track the finger closely.
+                            dragX.floatValue += dragAmount * 0.85f
+                            change.consume()
+                        }
+                    },
             state = listState,
             contentPadding = miuixContentPadding(bottomExtra = 148),
         ) {
@@ -224,7 +294,7 @@ fun MiuixFlowPage(
             visible = barVisible.value,
             enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 28.dp),
         ) {
             MiuixFlowBottomTabs(
                 tabs = tabs,
