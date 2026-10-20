@@ -51,27 +51,38 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Restore signing material (optional)
+      # Prefer a stable keystore from Secrets. Without it we still ship an R8-optimised build by
+      # generating an ephemeral key: the APK is smaller and faster, but its signature changes between
+      # runs, so it cannot update an existing install in place.
+      - name: Prepare signing material
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PROPS: ${{ secrets.KEYSTORE_PROPS }}
         run: |
-          if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "No KEYSTORE_BASE64 secret - falling back to a debug build."
-            exit 0
-          fi
           mkdir -p signature
-          echo "$KEYSTORE_BASE64" | base64 -d > signature/release.jks
-          printf '%s\n' "$KEYSTORE_PROPS" > signature/keystore_release.properties
+          if [ -n "${KEYSTORE_BASE64:-}" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > signature/release.jks
+            printf '%s\n' "$KEYSTORE_PROPS" > signature/keystore_release.properties
+            echo "Using keystore from Secrets."
+          else
+            keytool -genkeypair -v \
+              -keystore signature/release.jks -alias readyou \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass readyou2024 -keypass readyou2024 \
+              -dname "CN=ReadYou Miuix CI, OU=CI, O=GitHub Actions, L=NA, ST=NA, C=CN"
+            printf '%s\n' \
+              "storeFile=../signature/release.jks" \
+              "storePassword=readyou2024" \
+              "keyAlias=readyou" \
+              "keyPassword=readyou2024" \
+              > signature/keystore_release.properties
+            echo "Generated an ephemeral keystore (add KEYSTORE_BASE64 for a stable signature)."
+          fi
 
       - name: Build APK
         run: |
           set -euo pipefail
-          if [ -f signature/keystore_release.properties ]; then
-            ./gradlew :app:assembleGithubRelease --stacktrace
-          else
-            ./gradlew :app:assembleGithubDebug --stacktrace
-          fi
+          ./gradlew :app:assembleGithubRelease --stacktrace
 
       - name: Collect APK
         run: |
