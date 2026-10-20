@@ -49,12 +49,15 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Restore signing material
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      - name: Restore signing material (optional)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PROPS: ${{ secrets.KEYSTORE_PROPS }}
         run: |
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "No KEYSTORE_BASE64 secret - falling back to a debug build."
+            exit 0
+          fi
           mkdir -p signature
           echo "$KEYSTORE_BASE64" | base64 -d > signature/release.jks
           printf '%s\n' "$KEYSTORE_PROPS" > signature/keystore_release.properties
